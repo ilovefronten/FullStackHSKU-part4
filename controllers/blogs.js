@@ -1,22 +1,53 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 
-blogsRouter.get('/', (request, response) => {
+// 用了express的router后，这里的url从 “api/blogs” 变成了 “/”
+// 这是因为在app.js里用中间件定义了根url
+//```js
+// const blogsRouter = require('./controllers/blogs')
+// ...
+// app.use('/api/blogs', blogsRouter)
+//```
+
+/* blogsRouter.get('/', (request, response) => {
   Blog
     .find({})
     .then(blogs => {
       response.json(blogs)
-    })
+    })  
+}) */
+
+blogsRouter.get('/', async (request, response) => {
+  try {
+    const blogs = await Blog.find({})
+    response.json(blogs)
+  } catch(error) {
+    console.error(error.message)
+    response.status(404).end()
+  }
 })
 
-blogsRouter.post('/', (request, response) => {
+blogsRouter.post('/', async (request, response) => {
+  const newBlog = request.body
+  
+  if (!newBlog.title || !newBlog.url) {
+    return response.status(400).json(`Blog title or url missing`)
+  }
+  
+  if (!request.body.likes) {
+    request.body.likes = 0
+  }
+  
+  
   const blog = new Blog(request.body)
 
-  blog
-    .save()
-    .then(result => {
-      response.status(201).json(result)
-    })
+  try {
+    const result = await blog.save()
+    response.status(201).json(result)
+  } catch (error) {
+    response.status(400).json(`error: ${error}`)
+  }
+
 })
 
 module.exports = blogsRouter
