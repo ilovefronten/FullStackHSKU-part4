@@ -20,4 +20,16 @@ app.use(express.json())
 
 app.use('/api/blogs', blogsRouter)
 
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+}
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+  response.status(500).send({ error: 'Internal server error' });
+}
+
+app.use(unknownEndpoint)
+app.use(errorHandler)
+
 module.exports = app

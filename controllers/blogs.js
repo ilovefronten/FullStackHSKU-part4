@@ -21,7 +21,7 @@ blogsRouter.get('/', async (request, response) => {
   try {
     const blogs = await Blog.find({})
     response.json(blogs)
-  } catch(error) {
+  } catch (error) {
     console.error(error.message)
     response.status(404).end()
   }
@@ -29,16 +29,16 @@ blogsRouter.get('/', async (request, response) => {
 
 blogsRouter.post('/', async (request, response) => {
   const newBlog = request.body
-  
+
   if (!newBlog.title || !newBlog.url) {
     return response.status(400).json(`Blog title or url missing`)
   }
-  
+
   if (!request.body.likes) {
     request.body.likes = 0
   }
-  
-  
+
+
   const blog = new Blog(request.body)
 
   try {
@@ -48,6 +48,25 @@ blogsRouter.post('/', async (request, response) => {
     response.status(400).json(`error: ${error}`)
   }
 
+})
+
+blogsRouter.delete('/:id', async (request, response, next) => {
+  try {
+    const removedBlog = await Blog.findByIdAndDelete(request.params.id)
+    response.status(204).send(`removed`)
+  } catch (error) {   
+    next(error)   
+  }
+  
+})
+
+blogsRouter.put('/:id', async (request, response, next) => {
+  try {
+    const updateBlog = await Blog.findByIdAndUpdate(request.params.id, request.body, {new: true})
+    response.json(updateBlog)
+  } catch (error) {
+    next(error)
+  }
 })
 
 module.exports = blogsRouter

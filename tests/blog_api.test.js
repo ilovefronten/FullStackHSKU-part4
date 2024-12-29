@@ -10,10 +10,7 @@ const _ = require('lodash')
 beforeEach(async () => {
   await Blog.deleteMany({})
 
-  const blogObjects = helper.initialBlogs.map(blog => new Blog(blog))
-
-  const blogArray = blogObjects.map(blog => blog.save())
-  await Promise.all(blogArray)
+  await Blog.insertMany(helper.initialBlogs)
 })
 
 const api = supertest(app)
@@ -85,7 +82,7 @@ test('test if likes property is 0 when missing', async () => {
     .send(newBlogNoLike)
     .expect(201)
     .expect('Content-Type', /application\/json/)
-  
+
   assert.strictEqual(response.body.likes, 0)
 })
 
@@ -126,6 +123,44 @@ test('test 400 response when url missing', async () => {
     .expect(400)
 })
 
+test('test delete a blog', async () => {
+  const response = await api.get('/api/blogs')
+  const removeId = response.body[0].id  
+  //const responseText = 
+  await api.delete(`/api/blogs/${removeId}`).expect(204)
+
+  //console.log(responseText);
+
+  const blogsAfterRemove = (await api.get('/api/blogs')).body
+
+  assert.strictEqual(blogsAfterRemove.length, response.body.length - 1)
+
+  const blogsIdAfterRemove = blogsAfterRemove.map(blog => blog.id)
+
+  assert(!blogsIdAfterRemove.includes(removeId))
+})
+
+
+test('test update a blog', async () => {
+  const oldBlog = (await api.get('/api/blogs')).body[0]
+  
+  const newBlog = {
+    title: 'update title for the blog',
+    likes: oldBlog.likes + 1,
+    url: oldBlog.url,
+    author: oldBlog.author
+  }
+
+  const updateId = oldBlog.id
+  await api.put(`/api/blogs/${updateId}`).send(newBlog).expect(200)
+  
+  const updatedBlog = (await api.get('/api/blogs')).body[0]
+  
+  assert.strictEqual(updatedBlog.likes, helper.initialBlogs[0].likes + 1)
+  assert.strictEqual(updatedBlog.author, helper.initialBlogs[0].author)
+  assert.strictEqual(updatedBlog.url, helper.initialBlogs[0].url)
+  assert.strictEqual(updatedBlog.title, 'update title for the blog')
+})
 
 after(async () => {
   await mongoose.connection.close()
