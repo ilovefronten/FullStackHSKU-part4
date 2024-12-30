@@ -1,4 +1,5 @@
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 const initialBlogs = [
   {
@@ -25,7 +26,18 @@ const blogsInDb = async () => {
   return (await Blog.find({})).map(blog => blog.toJSON())
 }
 
+const usersInDb = async () => {
+  const users = await User.find({});
+  return users.map(user => ({
+    username: user.username,
+    name: user.name,
+    blogs: user.blogs,
+    id: user._id.toString() // 手动将 _id 转为字符串
+  }))
+}
+
 module.exports = {
   initialBlogs, 
-  blogsInDb
+  blogsInDb,
+  usersInDb
 }
