@@ -1,136 +1,94 @@
-const { describe, test, after, beforeEach } = require('node:test')
-const assert = require('node:assert')
+const { test, after, beforeEach, describe } = require('node:test')
+const Login = require('../controllers/login')
 const User = require('../models/user')
-const helper = require('./test_helper')
-const supertest = require('supertest')
 const bcrypt = require('bcryptjs')
-const app = require('../app')
 const mongoose = require('mongoose')
-const { forEach } = require('lodash')
+const assert = require('node:assert')
+const supertest = require('supertest')
+
+const app = require('../app')
+const helper = require('./test_helper')
+
 const api = supertest(app)
+class LoginInfo {
+  constructor(username, password) {
+    this.username = username
+    this.password = password
+  }
+}
+
+const passsword1 = 'sekret'
+const passsword2 = 'abababa'
+const username1 = 'root'
+const username2 = 'sam'
 
 describe('test login api', () => {
-  // Initiallize the test database 
+
+
   beforeEach(async () => {
     await User.deleteMany({})
 
-    const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({
-      username: 'root',
+    const passwordHash1 = await bcrypt.hash(passsword1, 10)
+    const passwordHash2 = await bcrypt.hash(passsword2, 10)
+
+    const user1 = new User({
+      username: username1,
       name: 'root',
-      passwordHash
+      passwordHash: passwordHash1
     })
 
-    await user.save()
+    const user2 = new User({
+      username: username2,
+      name: 'Sam',
+      passwordHash: passwordHash2
+    })
+
+    await user1.save()
+    await user2.save()
   })
 
-  test('test get all users', async () => {
-    const allUsers = await helper.usersInDb()
-    const response = await api
-      .get('/api/users')
+  test('test successful login', async () => {
+    const loginUser1 = new LoginInfo(username1, passsword1)
+    const loginUser2 = new LoginInfo(username2, passsword2)
+
+    const result1 = await api
+      .post('/api/login')
+      .send(loginUser1)
       .expect(200)
       .expect('Content-Type', /application\/json/)
 
-    assert.strictEqual(response.body.length, allUsers.length)
-    assert.deepStrictEqual(response.body, allUsers)
-  })
-
-  test('test add a new user to database', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const newUser = {
-      username: 'hellas',
-      name: 'Arto Hellas',
-      password: '%^&*987uio'
-    }
-
-    await api
-      .post('/api/users')
-      .send(newUser)
-      .expect(201)
+    const result2 = await api
+      .post('/api/login')
+      .send(loginUser2)
+      .expect(200)
       .expect('Content-Type', /application\/json/)
 
-    const usersAtLast = await helper.usersInDb()
-    // check number of user increases after added
-    assert.strictEqual(usersAtLast.length, usersAtStart.length + 1)
-
-    // check users include the latest added one
-    assert(usersAtLast.map(user => user.name).includes(newUser.name))
-
+    assert(result1.body.token)
+    assert(result2.body.token)
+    assert.strictEqual(result1.body.username, username1)
+    assert.strictEqual(result2.body.username, username2)
+    
+    const userInDb1 = (await helper.usersInDb()).find(user => user.username === result1.body.username)
+    const userInDb2 = (await helper.usersInDb()).find(user => user.username === result2.body.username)
+    assert.strictEqual(result1.body.name, userInDb1.name)
+    assert.strictEqual(result2.body.name, userInDb2.name)
   })
 
-  test('test duplicate usernames cannot be added', async () => {
-    const usersAtStart = await helper.usersInDb()
+  test('test wrong password and wrong username', async () => {
+    const loginUser1WrongPassword = new LoginInfo(username1, passsword2)
+    const loginUser2WrongName = new LoginInfo(username1, passsword2)
 
-    const duplicateUser = {
-      username: 'hellas',
-      name: 'Arto Hellas',
-      password: 'abcdefg'
-    }
+    const result1 = await api
+      .post('/api/login')
+      .send(loginUser1WrongPassword)
+      .expect(401)
 
-    await api
-      .post('/api/users')
-      .send(duplicateUser)
-      .expect(201)
-
-    const usersAfterFirstPost = await helper.usersInDb()
-
-    await api
-      .post('/api/users')
-      .send(duplicateUser)
-      .expect(400)
-
-    const result = await api
-      .get('/api/users')
-
-    assert.strictEqual(result.body.length, usersAfterFirstPost.length)
+    const result2 = await api
+      .post('/api/login')
+      .send(loginUser2WrongName)
+      .expect(401)
   })
 
-  test('test password too short', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const shortPasswordUser = {
-      username: 'hellas',
-      name: 'Arto Hellas',
-      password: '123'
-    }
-
-    await api
-      .post('/api/users')
-      .send(shortPasswordUser)
-      .expect(400)
-
-    const result = await api
-      .get('/api/users')
-      .expect(200)
-
-    const usersAtLast = result.body
-
-    assert.strictEqual(usersAtLast.length, usersAtStart.length)
-  })
-
-  test('test username too short', async () => {
-    const usersAtStart = await helper.usersInDb()
-
-    const shortUsernameUser = {
-      username: 'he',
-      name: 'Arto Hellas',
-      password: '%34hdh123'
-    }
-
-    await api
-      .post('/api/users')
-      .send(shortUsernameUser)
-      .expect(400)
-
-    const result = await api
-      .get('/api/users')
-      .expect(200)
-
-    const usersAtLast = result.body
-
-    assert.strictEqual(usersAtLast.length, usersAtStart.length)
-  })
 })
 
 after(async () => {
