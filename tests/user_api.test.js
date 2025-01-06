@@ -67,7 +67,7 @@ describe('test user api', () => {
       name: 'Arto Hellas',
       password: 'abcdefg'
     }
-
+    console.log('Will prompt duplicate user in commandline:');
     await api
       .post('/api/users')
       .send(duplicateUser)
@@ -118,6 +118,7 @@ describe('test user api', () => {
       password: '%34hdh123'
     }
 
+    console.log('Will prompt username too short in commandline:')
     await api
       .post('/api/users')
       .send(shortUsernameUser)

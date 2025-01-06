@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs')
 const mongoose = require('mongoose')
 const assert = require('node:assert')
 const supertest = require('supertest')
+const jwt = require('jsonwebtoken')
 
 const app = require('../app')
 const helper = require('./test_helper')
@@ -27,7 +28,7 @@ describe('test login api', () => {
 
   beforeEach(async () => {
     await User.deleteMany({})
-
+    
     const passwordHash1 = await bcrypt.hash(passsword1, 10)
     const passwordHash2 = await bcrypt.hash(passsword2, 10)
 
@@ -50,7 +51,6 @@ describe('test login api', () => {
   test('test successful login', async () => {
     const loginUser1 = new LoginInfo(username1, passsword1)
     const loginUser2 = new LoginInfo(username2, passsword2)
-
     const result1 = await api
       .post('/api/login')
       .send(loginUser1)
@@ -64,7 +64,9 @@ describe('test login api', () => {
       .expect('Content-Type', /application\/json/)
 
     assert(result1.body.token)
+    const decodedToken1 = jwt.verify(result1.body.token, process.env.SECRET)
     assert(result2.body.token)
+    const decodedToken2 = jwt.verify(result2.body.token, process.env.SECRET)
     assert.strictEqual(result1.body.username, username1)
     assert.strictEqual(result2.body.username, username2)
     

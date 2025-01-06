@@ -41,17 +41,13 @@ const getTokenFrom = request => {
 }
 
 blogsRouter.post('/', userExtractor, async (request, response, next) => {
-  const { title, url, likes } = request.body
-
+  const { title, url } = request.body
+  const likes = request.body.likes ? request.body.likes : 0
   if (!title || !url) {
     return response.status(400).json(`Blog title or url missing`)
   }
 
   const user = await User.findById(request.user.id)
-
-  if (!request.body.likes) {
-    request.body.likes = 0
-  }
 
   const blog = new Blog({
     title,
@@ -63,7 +59,7 @@ blogsRouter.post('/', userExtractor, async (request, response, next) => {
 
   try {
     const savedBlog = await blog.save()
-
+    // update blog array of the user
     user.blogs = user.blogs.concat(savedBlog._id)
     await user.save()
 
@@ -113,10 +109,16 @@ blogsRouter.delete('/:id', userExtractor, async (request, response, next) => {
 
 })
 
-blogsRouter.put('/:id', async (request, response, next) => {
+blogsRouter.put('/:id', userExtractor, async (request, response, next) => {
   try {
-    const updateBlog = await Blog.findByIdAndUpdate(request.params.id, request.body, { new: true })
-    response.json(updateBlog)
+    const author = (await Blog.findById(request.params.id)).author
+    // verify if the user is the author
+    if (request.user.username === author) {
+      const updateBlog = await Blog.findByIdAndUpdate(request.params.id, request.body, { new: true })
+      response.json(updateBlog)
+    } else {
+      return response.status(401).json('user invalid')
+    }
   } catch (error) {
     next(error)
   }

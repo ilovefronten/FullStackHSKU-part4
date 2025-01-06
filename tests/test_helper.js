@@ -1,25 +1,37 @@
 const Blog = require('../models/blog')
 const User = require('../models/user')
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 
 const initialBlogs = [
   {
-      "title": "My first blog",
-      "author": "vetikke",
-      "url": "first-blog",
-      "likes": 55
+    "title": "My first blog",
+    "author": "vetikke",
+    "url": "first-blog",
+    "likes": 55
   },
   {
-      "title": "My 2nd blog",
-      "author": "ikjevet",
-      "url": "second-blog",
-      "likes": 0
+    "title": "My 2nd blog",
+    "author": "ikkevet",
+    "url": "second-blog",
+    "likes": 0
+  },
+]
+
+const UserPassword = ['thisisthefirstpw!', 'pwisthis2!']
+
+const initializeUsers = async () => [
+  {
+    "username": "vetikke",
+    "name": "sam",
+    "passwordHash": await bcrypt.hash(UserPassword[0], 10),
   },
   {
-      "title": "My 3rd blog",
-      "author": "ikkevet",
-      "url": "third-blog",
-      "likes": 20
-  }
+    "username": "ikkevet",
+    "name": "jack",
+    "passwordHash": await bcrypt.hash(UserPassword[1], 10),
+  },
+
 ]
 
 const blogsInDb = async () => {
@@ -37,7 +49,9 @@ const usersInDb = async () => {
 }
 
 module.exports = {
-  initialBlogs, 
+  initialBlogs,
+  UserPassword,
+  initializeUsers,
   blogsInDb,
   usersInDb
 }
